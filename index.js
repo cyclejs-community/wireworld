@@ -59,8 +59,15 @@ const initialState = {
 };
 
 initialState.grid[5] = _.range(30).map(() => 3);
-initialState.grid[5][5] = 2
-initialState.grid[5][6] = 1
+initialState.grid[5][0] = 0;
+initialState.grid[5][29] = 0;
+initialState.grid[5][5] = 2;
+initialState.grid[5][6] = 1;
+initialState.grid[6][0] = 3;
+initialState.grid[6][29] = 3;
+initialState.grid[7] = _.range(30).map(() => 3);
+initialState.grid[7][0] = 0;
+initialState.grid[7][29] = 0;
 
 function update (state) {
   return {
