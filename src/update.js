@@ -1,9 +1,4 @@
-const STATES = {
-  EMPTY: 0,
-  HEAD: 1,
-  TAIL: 2,
-  CONDUCTOR: 3
-};
+import {EMPTY, HEAD, TAIL, CONDUCTOR} from './states';
 
 const NEIGHBOUR_DIRECTIONS = [
   {column: -1, row: -1}, // NW
@@ -37,30 +32,30 @@ function mooreNeighbours (grid, row, column) {
 export default function update (grid) {
   return grid.map((row, rowIndex) =>
     row.map((state, index) => {
-      if (state === STATES.EMPTY) {
-        return STATES.EMPTY;
+      if (state === EMPTY) {
+        return EMPTY;
       }
 
-      if (state === STATES.HEAD) {
-        return STATES.TAIL;
+      if (state === HEAD) {
+        return TAIL;
       }
 
-      if (state === STATES.TAIL) {
-        return STATES.CONDUCTOR;
+      if (state === TAIL) {
+        return CONDUCTOR;
       }
 
-      if (state === STATES.CONDUCTOR) {
+      if (state === CONDUCTOR) {
         const neighbours = mooreNeighbours(grid, rowIndex, index);
 
         const numbersOfNeighboursInHeadState = neighbours
-          .filter(neighbourState => neighbourState === STATES.HEAD)
+          .filter(neighbourState => neighbourState === HEAD)
           .length;
 
         if (numbersOfNeighboursInHeadState === 1 || numbersOfNeighboursInHeadState === 2) {
-          return STATES.HEAD;
+          return HEAD;
         }
 
-        return STATES.CONDUCTOR;
+        return CONDUCTOR;
       }
     })
   );
