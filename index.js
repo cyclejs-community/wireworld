@@ -55,10 +55,6 @@ function debug (val) {
   return div(JSON.stringify(val));
 }
 
-const initialState = {
-  grid: Grid({width: 30, height: 20})
-};
-
 function update (state) {
   return {
     grid: updateGrid(state.grid)
@@ -83,24 +79,46 @@ function toRowColumn (position) {
   return {
     column: Math.floor(position.x / CELL_WIDTH),
     row: Math.floor(position.y / CELL_HEIGHT)
-  }
+  };
 }
 
-const drawCell = diagram`
-    Given: ${{toRowColumn, drawCellReducer}}
+const isMouseDown = diagram`
+  Given: ${{xs}}
 
-    {sources.Mouse.positions()}       {sources.Mouse.down$}
+  {sources.Mouse.down$}  {sources.Mouse.up$}
+            |                    |
+       {.mapTo(true)}      {.mapTo(false)}
+            |                    |
+          down$                 up$
+            |                    |
+            {xs.merge(down$, up$)}
+                     |
+              {.startWith(false)}
+                     |
+                isMouseDown$
+`;
+
+const drawCell = diagram`
+    Given: ${{toRowColumn, drawCellReducer, xs, isMouseDown}}
+
+                                            {sources}
+                                                |
+    {sources.Mouse.positions()}           {isMouseDown}
                 |                               |
-        {.map(toRowColumn)}                     |
+        {.map(toRowColumn)}              {.isMouseDown$}
                 |                               |
-             position$                        down$
+             position$                    isMouseDown$
                 |                               |
-  {position$.map(mousePosition => down$.mapTo(drawCellReducer(mousePosition)))}
+  {xs.combine(position$, isMouseDown$).map(([position, down]) => down ? drawCellReducer(position) : null)}
                                 |
-                           {.flatten()}
+                    {.filter(reducer => !!reducer)}
                                 |
                             drawCell$
 `;
+
+const initialState = {
+  grid: Grid({width: 30, height: 20})
+};
 
 const main = diagram`
   Given ${{initialState, renderGrid, xs, update, drawCell}}

@@ -11,6 +11,7 @@ export default function mousePositionDriver () {
     },
 
     click$: fromEvent(document, 'click'),
-    down$: fromEvent(document, 'mousedown')
+    down$: fromEvent(document, 'mousedown'),
+    up$: fromEvent(document, 'mouseup')
   };
 }
