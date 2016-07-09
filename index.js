@@ -10,8 +10,8 @@ const CELL_WIDTH = 30;
 const CELL_HEIGHT = 30;
 
 function Grid ({width, height}) {
-  return _.range(width).map(() =>
-    _.range(height).map(() => 0)
+  return _.range(height).map(() =>
+    _.range(width).map(() => 0)
   );
 }
 
@@ -55,7 +55,7 @@ function debug (val) {
 }
 
 const initialState = {
-  grid: Grid({width: 50, height: 30})
+  grid: Grid({width: 30, height: 20})
 };
 
 initialState.grid[5] = _.range(30).map(() => 3);

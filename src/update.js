@@ -20,8 +20,8 @@ function inBounds (grid, position) {
   const gridHeight = grid.length;
   const gridWidth = grid[0].length;
 
-  const rowInBounds = 0 < position.row && position.row <= gridWidth;
-  const columnInBounds = 0 < position.column && position.column <= gridHeight;
+  const rowInBounds = 0 < position.row && position.row <= gridHeight;
+  const columnInBounds = 0 < position.column && position.column <= gridWidth;
 
   return rowInBounds && columnInBounds;
 }
