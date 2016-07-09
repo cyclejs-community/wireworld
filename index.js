@@ -5,6 +5,7 @@ import _ from 'lodash';
 import diagram from 'stream-tree';
 
 import updateGrid from './src/update';
+import mouseDriver from './src/drivers/mouse-driver';
 
 const CELL_WIDTH = 30;
 const CELL_HEIGHT = 30;
@@ -46,7 +47,7 @@ function renderCell (cell, row, column) {
   };
 
   return (
-    div('.cell', {style})
+    div('.cell', {key: row + column, style})
   );
 }
 
@@ -58,42 +59,75 @@ const initialState = {
   grid: Grid({width: 30, height: 20})
 };
 
-initialState.grid[5] = _.range(30).map(() => 3);
-initialState.grid[5][0] = 0;
-initialState.grid[5][29] = 0;
-initialState.grid[5][5] = 2;
-initialState.grid[5][6] = 1;
-initialState.grid[6][0] = 3;
-initialState.grid[6][29] = 3;
-initialState.grid[7] = _.range(30).map(() => 3);
-initialState.grid[7][0] = 0;
-initialState.grid[7][29] = 0;
-
 function update (state) {
   return {
     grid: updateGrid(state.grid)
   };
 }
 
-const main = diagram`
-  Given ${{initialState, renderGrid, xs, update}}
+function updateCell (grid, mousePosition, newState) {
+  grid[mousePosition.row][mousePosition.column] = newState;
 
-                  {xs.periodic(100)}
-                          |
-                   {.mapTo(update)}
-                          |
+  return grid;
+}
+
+function drawCellReducer (mousePosition) {
+  return function _drawCellReducer (state) {
+    return {
+      grid: updateCell(state.grid, mousePosition, 3)
+    };
+  };
+}
+
+function toRowColumn (position) {
+  return {
+    column: Math.floor(position.x / CELL_WIDTH),
+    row: Math.floor(position.y / CELL_HEIGHT)
+  }
+}
+
+const drawCell = diagram`
+    Given: ${{toRowColumn, drawCellReducer}}
+
+    {sources.Mouse.positions()}       {sources.Mouse.down$}
+                |                               |
+        {.map(toRowColumn)}                     |
+                |                               |
+             position$                        down$
+                |                               |
+  {position$.map(mousePosition => down$.mapTo(drawCellReducer(mousePosition)))}
+                                |
+                           {.flatten()}
+                                |
+                            drawCell$
+`;
+
+const main = diagram`
+  Given ${{initialState, renderGrid, xs, update, drawCell}}
+
+           {xs.periodic(100)}     {sources}
+                  |                   |
+           {.mapTo(update)}      {drawCell}
+                  |                   |
+                  |             {.drawCell$}
+                  |                   |
+                update$           drawCell$
+                  |                   |
+              {xs.merge(update$, drawCell$)}
+                            |
   {.fold((state, reducer) => reducer(state), initialState)}
-                          |
-           {.map(state => renderGrid(state.grid))}
-                          |
-                         DOM
+                            |
+             {.map(state => renderGrid(state.grid))}
+                            |
+                           DOM
 `;
 
 // As a user, I want to be able to draw all the different states
 // As a user, I want to see the animation flow
 
 const drivers = {
-  DOM: makeDOMDriver('.app')
+  DOM: makeDOMDriver('.app'),
+  Mouse: mouseDriver
 };
 
 run(main, drivers);
