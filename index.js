@@ -184,11 +184,11 @@ const main = diagram`
            {xs.periodic(100)}            {sources}
                   |                      /       \
            {.mapTo(update)}      {drawCell}      {changeDrawing}
-                  |                   |                 |
-                  |             {.drawCell$}     {.changeDrawing$}
-                  |                   |                 |
-                update$           drawCell$        changeDrawing$
-                  |                   |                 |
+                  |                   |                |
+                  |             {.drawCell$}    {.changeDrawing$}
+                  |                   |                |
+                update$           drawCell$       changeDrawing$
+                  |                   |                |
               {xs.merge(update$, drawCell$, changeDrawing$)}
                             |
   {.fold((state, reducer) => reducer(state), initialState)}
