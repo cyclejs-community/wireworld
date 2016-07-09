@@ -6,7 +6,9 @@ import diagram from 'stream-tree';
 
 import updateGrid from './src/update';
 import mouseDriver from './src/drivers/mouse-driver';
+import keysDriver from './src/drivers/keys-driver';
 import {EMPTY, HEAD, TAIL, CONDUCTOR} from './src/states';
+const STATES = [EMPTY, HEAD, TAIL, CONDUCTOR];
 
 const CELL_WIDTH = 30;
 const CELL_HEIGHT = 30;
@@ -53,10 +55,21 @@ function renderCell (cell, row, column) {
   );
 }
 
+function renderDrawing (drawing) {
+  return (
+    div('.drawing', {style: {position: 'absolute', 'z-index': 5}}, {
+      0: 'Empty',
+      1: 'Head',
+      2: 'Tail',
+      3: 'Conductor'
+    }[drawing])
+  );
+}
+
 function view (state) {
   return (
     div('.wireworld', [
-      debug(state.drawing),
+      renderDrawing(state.drawing),
 
       renderGrid(state.grid)
     ])
@@ -86,7 +99,7 @@ function drawCellReducer (mousePosition) {
     return {
       ...state,
 
-      grid: updateCell(state.grid, mousePosition, CONDUCTOR)
+      grid: updateCell(state.grid, mousePosition, state.drawing)
     };
   };
 }
@@ -96,6 +109,20 @@ function toRowColumn (position) {
     column: Math.floor(position.x / CELL_WIDTH),
     row: Math.floor(position.y / CELL_HEIGHT)
   };
+}
+
+function changeDrawingReducer (drawing) {
+  return function _changeDrawingReducer (state) {
+    return {
+      ...state,
+
+      drawing
+    };
+  };
+}
+
+function changeDrawingReducer$ (Keys, drawing) {
+  return Keys.down((drawing + 1).toString()).mapTo(changeDrawingReducer(drawing));
 }
 
 const isMouseDown = diagram`
@@ -114,17 +141,29 @@ const isMouseDown = diagram`
                 isMouseDown$
 `;
 
+const changeDrawing = diagram`
+  Given: ${{STATES, changeDrawingReducer$, xs}}
+
+  {STATES.map(state => changeDrawingReducer$(sources.Keys, state))}
+                        |
+                  reducerStreams
+                        |
+            {xs.merge(...reducerStreams)}
+                        |
+                  changeDrawing$
+`;
+
 const drawCell = diagram`
     Given: ${{toRowColumn, drawCellReducer, xs, isMouseDown}}
 
-                                            {sources}
-                                                |
-    {sources.Mouse.positions()}           {isMouseDown}
-                |                               |
-        {.map(toRowColumn)}              {.isMouseDown$}
-                |                               |
-             position$                    isMouseDown$
-                |                               |
+                                      {sources}
+                                          |
+    {sources.Mouse.positions()}     {isMouseDown}
+                |                         |
+        {.map(toRowColumn)}        {.isMouseDown$}
+                |                         |
+             position$              isMouseDown$
+                |                         |
               {xs.combine(position$, isMouseDown$)}
                                 |
     {.map(([position, down]) => down ? drawCellReducer(position) : null)}
@@ -140,17 +179,17 @@ const initialState = {
 };
 
 const main = diagram`
-  Given ${{initialState, view, xs, update, drawCell}}
+  Given ${{initialState, view, xs, update, drawCell, changeDrawing}}
 
-           {xs.periodic(100)}     {sources}
-                  |                   |
-           {.mapTo(update)}      {drawCell}
-                  |                   |
-                  |             {.drawCell$}
-                  |                   |
-                update$           drawCell$
-                  |                   |
-              {xs.merge(update$, drawCell$)}
+           {xs.periodic(100)}            {sources}
+                  |                      /       \
+           {.mapTo(update)}      {drawCell}      {changeDrawing}
+                  |                   |                 |
+                  |             {.drawCell$}     {.changeDrawing$}
+                  |                   |                 |
+                update$           drawCell$        changeDrawing$
+                  |                   |                 |
+              {xs.merge(update$, drawCell$, changeDrawing$)}
                             |
   {.fold((state, reducer) => reducer(state), initialState)}
                             |
@@ -164,7 +203,8 @@ const main = diagram`
 
 const drivers = {
   DOM: makeDOMDriver('.app'),
-  Mouse: mouseDriver
+  Mouse: mouseDriver,
+  Keys: keysDriver
 };
 
 run(main, drivers);
